@@ -1,0 +1,17 @@
+input_dim = 384
+hidden_dim = 384
+bi_attn_drop = 0.3
+q_update =False
+n_layers =2
+tok2ent = 'mean_max'
+n_heads = 2
+lstm_drop = 0.3
+max_doc_len = 512
+max_query_len = 20
+model_gpu = 0
+trans_drop = 0.5
+gnn_drop = 0.5
+q_attn = False
+n_type = 2
+basicblock_trans = False
+trans_heads =3
