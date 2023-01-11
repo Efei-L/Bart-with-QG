@@ -1,4 +1,4 @@
-from train_2 import Trainer
+from train import Trainer
 from inference_question import BeamSearcher
 import os
 import config_file

@@ -9,15 +9,12 @@ from sklearn.metrics import accuracy_score
 import time
 import torch
 
-print("DFGN w/o EAEm train ")  # 查看torch当前版本号
-
-
 print(torch.version.cuda)  # 编译当前版本的torch使用的cuda版本号
 
 print(torch.cuda.is_available())
 class Trainer(object):
     def __init__(self):
-        train_dataset = Dataset('train.json', 'train.tgt.txt', 'train.ans.txt', config_file.debug)
+        train_dataset = Dataset('valid.json', 'valid.tgt.txt', 'valid.ans.txt', config_file.debug)
         valid_dataset = Dataset('valid.json', 'valid.tgt.txt', 'valid.ans.txt', config_file.debug)
         self.train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                         batch_size=32,
@@ -39,7 +36,9 @@ class Trainer(object):
         # self.optimizer = AdamW(self.model.parameters(), lr = self.lr_rate)
         # params_dict = [{'params': self.model.decode.parameters(), 'lr': 0.0004},
         #                {'params': self.model.bart.parameters(), 'lr': 3e-5}]
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=self.lr)
+        self.optimizer = optim.AdamW([
+            {"params":self.model.dfgn.parameters(),"lr":3e-5},],
+            lr=self.lr)
         self.criterion = torch.nn.CrossEntropyLoss()
         self.binary_criterion = torch.nn.BCEWithLogitsLoss(size_average=True)
         self.metric_func = lambda y_pred, y_true: accuracy_score(y_true.data.numpy(), y_pred.data.numpy() > 0.5)
