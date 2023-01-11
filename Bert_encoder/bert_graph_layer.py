@@ -1,4 +1,4 @@
-from transformers import BertModel
+from transformers import BertModel,BartModel
 import torch
 import torch.nn as nn
 from torch.nn.utils import rnn
@@ -74,7 +74,7 @@ class Bert_Graph_Layer(nn.Module):
         super(Bert_Graph_Layer,self).__init__()
         self.max_mean_pooling = MeanMaxPooling()
         self.ent2doc = LSTMWrapper(768*2, 768 // 2, 1)
-        self.bert = BertModel.from_pretrained('bert-base-cased')
+        self.bert = BartModel.from_pretrained('facebook/bart-base')
         self.entity_linear_1 = nn.Linear(768, 1)
     def forward(self, batch, encoder_hidden_states):
         entity_mapping = batch['entity_mapping']
@@ -83,7 +83,7 @@ class Bert_Graph_Layer(nn.Module):
         doc_length = batch['context_length']
         src = self.max_mean_pooling(encoder_hidden_states, entity_mapping, entity_length)
         src_mask = entity_mask
-        out = self.bert(inputs_embeds = src, attention_mask = src_mask)
+        out = self.bert(inputs_embeds = src, attention_mask = src_mask,decoder_inputs_embeds = src, decoder_attention_mask = src_mask)
         d_output = out.last_hidden_state
         doc_state = self.ent2doc(encoder_hidden_states, d_output, entity_mapping, doc_length)
         entity_logits = self.entity_linear_1(d_output)
