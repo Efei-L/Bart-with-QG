@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BartForConditionalGeneration, BartConfig
 from DFGN.GFN import GraphFusionNet
-from Bert_encoder.bert_graph_layer import Bert_Graph_Layer
 import config_file
 epsilon = 1e-20
 class Decode(nn.Module):
@@ -125,15 +124,14 @@ class Model(nn.Module):
         self.bart.load_state_dict(state_dict)
         self.bart = self.bart.to(config_file.device)
         self.embedding_dec = nn.Embedding(vocab_size, config_file.embedding_size)
-        self.encoder_trans = nn.Linear(768, 768)
+        self.encoder_trans = nn.Linear(2 * 384, config_file.hidden_size)
         self.decoder_trans = nn.Linear(config_file.embedding_size, config_file.hidden_size)
         self.init_state_trans = nn.Linear(384, config_file.hidden_size)
-        self.encoder_fc = nn.Linear(768,768)
-        self.dfgn_fc = nn.Linear(768,768)
-        self.trans_fc = nn.Linear(768,384)
-        self.dfgn = Bert_Graph_Layer()
+        self.encoder_fc = nn.Linear(384,384)
+        self.dfgn_fc = nn.Linear(384,384)
+        self.dfgn = GraphFusionNet()
         self.dfgn = self.dfgn.to(config_file.device)
-        print("bert graph")
+        print("恢复原样+gate")
     def get_encoder_features(self, encoder_outputs):
         return self.encoder_trans(encoder_outputs)
     def get_decoder_features(self, decoder_outputs):
@@ -169,7 +167,6 @@ class Model(nn.Module):
         f2 = self.dfgn_fc(dfgn_hidden_states)
         gate = torch.sigmoid(f1+f2)
         encoder_features = encoder_hidden_states * gate + dfgn_hidden_states * (1-gate)
-        encoder_features = self.trans_fc(encoder_features)
         logits = self.decode(encoder_features, decoder_emb, init_hidden_states, input_attention_mask, label,
                             decoder_mask, scheduled_probs)
 
