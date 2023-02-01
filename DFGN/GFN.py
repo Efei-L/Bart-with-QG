@@ -34,7 +34,7 @@ class GraphFusionNet(nn.Module):
         self.entity_linear_0 = nn.Linear(h_dim + q_dim, h_dim)
         self.entity_linear_1 = nn.Linear(h_dim, 1)
         print("DFGN..gfn ")
-    def forward(self, batch,encoder_hidden_states):
+    def forward(self, batch,encoder_hidden_states,sent_vec_node):
         query_mapping = batch['query_mask']
         entity_mask = batch['entity_mask']
         context_encoding = encoder_hidden_states
@@ -53,7 +53,7 @@ class GraphFusionNet(nn.Module):
         softmasks = []
         entity_state = None
         for l in range(self.n_layers):
-            input_state, entity_state, softmask = self.basicblocks[l](input_state, query_vec, batch)
+            input_state, entity_state, softmask = self.basicblocks[l](input_state, query_vec, batch,sent_vec_node)
             softmasks.append(softmask)
             if config.q_update:
                 query_attn_output, _ = self.query_update_layers[l](trunc_query_state, entity_state, entity_mask)

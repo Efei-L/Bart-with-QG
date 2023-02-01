@@ -138,6 +138,9 @@ class Model(nn.Module):
         return self.decoder_trans(decoder_outputs)
     def get_init_features(self, init_hidden_state):
         return self.init_state_trans(init_hidden_state)
+    def mean_pooling(self,input, mask):
+        mean_pooled = input.sum(dim=1) / mask.sum(dim=1, keepdim=True)
+        return mean_pooled
     def forward(self, input, input_attention_mask, label, label_attention_mask,scheduled_probs, batch):
         self.bart.eval()
         # self.dfgn.eval()
@@ -158,11 +161,13 @@ class Model(nn.Module):
             zero_mat = torch.zeros(decoder_output.size(0), decoder_output.size(1)).to(config_file.device)
             decoder_mask = zero_mat.eq(one_mat.eq(decoder_output)).to(config_file.device)
             decoder_mask = decoder_mask.to(config_file.device)
+            sent_vec = self.mean_pooling(encoder_hidden_states,input_attention_mask)
+            sent_vec = sent_vec.unsqueeze(1)
         decoder_emb = self.embedding_dec(decoder_output)
         decoder_emb = self.decoder_trans(decoder_emb)
         encoder_hidden_states = self.encoder_trans(encoder_hidden_states)
         init_hidden_states = self.init_state_trans(init_hidden_states)
-        entity_logits, dfgn_hidden_states = self.dfgn(batch,encoder_hidden_states)
+        entity_logits, dfgn_hidden_states = self.dfgn(batch,encoder_hidden_states,sent_vec)
         f1 = self.encoder_fc(encoder_hidden_states)
         f2 = self.dfgn_fc(dfgn_hidden_states)
         gate = torch.sigmoid(f1+f2)

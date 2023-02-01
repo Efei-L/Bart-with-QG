@@ -67,7 +67,7 @@ def collate_fn(data):
     for example in src:
         context_ids.append(torch.Tensor(example['tokennums'][:max_context_len]))
         adj = torch.Tensor(example['adj'])
-        entity_graphs.append(adj[:max_entity,:max_entity])
+        entity_graphs.append(adj[:max_entity+1,:max_entity+1])
         M = torch.Tensor(example['M'])
         entity_mapping.append(M[:max_entity,:max_context_len])
         entity_nums = len(example['graph'])

@@ -14,8 +14,8 @@ print(torch.version.cuda)  # 编译当前版本的torch使用的cuda版本号
 print(torch.cuda.is_available())
 class Trainer(object):
     def __init__(self):
-        train_dataset = Dataset('valid.json', 'valid.tgt.txt', 'valid.ans.txt', config_file.debug)
-        valid_dataset = Dataset('valid.json', 'valid.tgt.txt', 'valid.ans.txt', config_file.debug)
+        train_dataset = Dataset('valid_new.json', 'valid.tgt.txt', 'valid.ans.txt', config_file.debug)
+        valid_dataset = Dataset('valid_new.json', 'valid.tgt.txt', 'valid.ans.txt', config_file.debug)
         self.train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                         batch_size=32,
                                                         collate_fn=collate_fn,

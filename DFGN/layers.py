@@ -161,6 +161,10 @@ class GATSelfAttention(nn.Module):
         zero_vec = -9e15 * torch.ones_like(scores)
         scores = torch.where(adj > 0, scores, zero_vec)
 
+
+        #删除sent节点
+        h = h[:,1:,:]
+        scores = scores[:, 1:, 1:]
         # Ahead Alloc
         if adj_mask is not None:
             h = h * adj_mask
@@ -251,7 +255,7 @@ class BasicBlock(nn.Module):
         self.gat = AttentionLayer(input_dim, hidden_dim, config.n_heads, config, layer_id=layer)
         self.int_layer = InteractionLayer(hidden_dim * 2, hidden_dim, config)
 
-    def forward(self, doc_state, query_vec, batch):
+    def forward(self, doc_state, query_vec, batch,sent_vec_node):
         context_mask = batch['context_mask']
         entity_mapping = batch['entity_mapping']
         entity_length = batch['entity_lens']
@@ -266,6 +270,7 @@ class BasicBlock(nn.Module):
         softmask = query_scores * entity_mask.unsqueeze(2)  # N x E x 1  BCELossWithLogits
         adj_mask = torch.sigmoid(softmask)
 
+        entity_state = torch.cat((sent_vec_node,entity_state),dim=1)
         entity_state = self.gat(entity_state, adj, entity_mask, adj_mask=adj_mask, query_vec=query_vec)
         doc_state = self.int_layer(doc_state, entity_state, doc_length, entity_mapping, entity_length, context_mask)
         return doc_state, entity_state, softmask
