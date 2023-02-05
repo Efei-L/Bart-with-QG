@@ -53,18 +53,20 @@ class GraphFusionNet(nn.Module):
         softmasks = []
         entity_state = None
         for l in range(self.n_layers):
-            input_state, entity_state, softmask = self.basicblocks[l](input_state, query_vec, batch,sent_vec_node)
+            context_state, input_state, entity_state, softmask = self.basicblocks[l](input_state, query_vec, batch,sent_vec_node)
             softmasks.append(softmask)
             if config.q_update:
                 query_attn_output, _ = self.query_update_layers[l](trunc_query_state, entity_state, entity_mask)
                 trunc_query_state = self.query_update_linears[l](query_attn_output)
                 query_vec = mean_pooling(trunc_query_state, trunc_query_mapping)
-        expand_query = query_vec.unsqueeze(1).repeat((1, entity_state.shape[1], 1))
-        entity_logits = self.entity_linear_0(torch.cat([entity_state, expand_query], dim=2))
+        trip_entity_state = entity_state[:,1:]
+        expand_query = query_vec.unsqueeze(1).repeat((1, trip_entity_state.shape[1], 1))
+        entity_logits = self.entity_linear_0(torch.cat([trip_entity_state, expand_query], dim=2))
         entity_logits = self.entity_linear_1(F.relu(entity_logits))
         entity_prediction = entity_logits.squeeze(2) - 1e30 * (1 - entity_mask)
         # logits = self.entity_fc(entity_state)
-        return entity_prediction, input_state
+        input_state = torch.cat([context_state,input_state],dim=1)
+        return entity_prediction, input_state, entity_state
 
 
 

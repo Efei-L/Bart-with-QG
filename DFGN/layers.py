@@ -5,6 +5,9 @@ import torch.nn.functional as F
 from torch.nn.utils import rnn
 from torch.autograd import Variable
 from pytorch_pretrained_bert.modeling import BertLayer
+
+import config_file
+
 print('dfgn layers')
 def get_weights(size, gain=1.414):
     weights = nn.Parameter(torch.zeros(size=size))
@@ -161,10 +164,6 @@ class GATSelfAttention(nn.Module):
         zero_vec = -9e15 * torch.ones_like(scores)
         scores = torch.where(adj > 0, scores, zero_vec)
 
-
-        #删除sent节点
-        h = h[:,1:,:]
-        scores = scores[:, 1:, 1:]
         # Ahead Alloc
         if adj_mask is not None:
             h = h * adj_mask
@@ -209,7 +208,7 @@ class InteractionLayer(nn.Module):
         super(InteractionLayer, self).__init__()
         self.config = config
         self.use_trans = config.basicblock_trans
-
+        self.c_node_trans = nn.Linear(384,768)
         if config.basicblock_trans:
             bert_config = BertConfig(input_dim, config.trans_heads, config.trans_drop)
             self.transformer = BertLayer(bert_config)
@@ -224,8 +223,11 @@ class InteractionLayer(nn.Module):
         :param entity_mapping: N x E x L
         :return: doc_state: N x L x out_dim, entity_state: N x L x out_dim (x2)
         """
-        expand_entity_state = torch.sum(entity_state.unsqueeze(2) * entity_mapping.unsqueeze(3), dim=1)  # N x E x L x d
+        #将实体节点和上下文节点拆开使得实体节点融入上下文
+        c_state,e_state = entity_state[:,:1],entity_state[:,1:]
+        expand_entity_state = torch.sum(e_state.unsqueeze(2) * entity_mapping.unsqueeze(3), dim=1)  # N x E x L x d
         input_state = torch.cat([expand_entity_state, doc_state], dim=2)
+        input_state = torch.cat([self.c_node_trans(c_state),input_state],dim=1)
 
         if self.use_trans:
             extended_attention_mask = context_mask.unsqueeze(1).unsqueeze(2)
@@ -262,18 +264,18 @@ class BasicBlock(nn.Module):
         entity_mask = batch['entity_mask']
         doc_length = batch['context_length']
         adj = batch['entity_graphs']
-
+        entity_mask = torch.cat((torch.ones((32, 1)).to(config_file.device), entity_mask), dim=1)
         entity_state = self.tok2ent(doc_state, entity_mapping, entity_length)
-
+        entity_state = torch.cat((sent_vec_node, entity_state), dim=1)
         query = torch.matmul(query_vec, self.query_weight)
         query_scores = torch.bmm(entity_state, query.unsqueeze(2)) / self.temp
         softmask = query_scores * entity_mask.unsqueeze(2)  # N x E x 1  BCELossWithLogits
         adj_mask = torch.sigmoid(softmask)
 
-        entity_state = torch.cat((sent_vec_node,entity_state),dim=1)
+
         entity_state = self.gat(entity_state, adj, entity_mask, adj_mask=adj_mask, query_vec=query_vec)
         doc_state = self.int_layer(doc_state, entity_state, doc_length, entity_mapping, entity_length, context_mask)
-        return doc_state, entity_state, softmask
+        return doc_state[:,:1],doc_state[:,1:], entity_state, softmask
 
 
 class BiAttention(nn.Module):
