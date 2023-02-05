@@ -264,6 +264,7 @@ class BasicBlock(nn.Module):
         entity_mask = batch['entity_mask']
         doc_length = batch['context_length']
         adj = batch['entity_graphs']
+
         entity_mask = torch.cat((torch.ones((32, 1)).to(config_file.device), entity_mask), dim=1)
         entity_state = self.tok2ent(doc_state, entity_mapping, entity_length)
         entity_state = torch.cat((sent_vec_node, entity_state), dim=1)

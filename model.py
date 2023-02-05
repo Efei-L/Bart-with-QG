@@ -187,6 +187,7 @@ class Model(nn.Module):
 
         return logits, entity_logits
 
+
 class MultiheadAttPoolLayer(nn.Module):
 
     def __init__(self, n_head, d_q_original, d_k_original, dropout=0.1):
